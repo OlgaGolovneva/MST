@@ -38,33 +38,33 @@ import org.apache.flink.graph.Graph;
 import org.apache.flink.graph.Vertex;
 import org.apache.flink.graph.GraphAlgorithm;
 
-/**Describe your program
- * This implementation uses Boruvka's algorithm to create the Minimum Spanning Tree (MST)
- * Implementation ALLOWS FOR disconnected, directed graph (See MY_MSTDefaultData for Examples)
- * If graph is disconnected, output is a Minimum Spanning Forest
- * Implementation does not take into account Edge Directions, i.e. Sorce -> Target, Sorce <- Target
- * and Sorce <-> Target are equivalent
- *
- * A minimum spanning tree is a spanning tree of a connected, undirected graph.
- * It connects all the vertices together with the minimal total weighting for its edges.
+/**
+ * This implementation uses Boruvka's algorithm to find a Minimum Spanning Tree (MST)
+ * A minimum spanning tree is a spanning tree of a connected, undirected graph. It connects
+ * all the vertices together with the minimal total weighting for its edges.
  * A single graph can have many different spanning trees, this algorithm returns one of them
- *
- * The basic algorithm is descibed here: http://www.vldb.org/pvldb/vol7/p1047-han.pdf,
- * and works as follows: In the first phase, each vertex finds a minimum weight out-edge. These edges are added to
- * intermediate MST (i.e. MST at current iteration step). In the second phase, vertices perform Summarization algorithm,
- * using information about Connected Components in intermediate MST. In the third phase, vertices perform edge cleaning.
- * The graph gets smaller and smaller, with the algorithm terminating when only unconnected vertices (i.e. no more
- * Edges) remain.
- *
+ * Implementation ALLOWS FOR disconnected, directed input graph (See MY_MSTDefaultData for Examples)
+ * If the input graph is disconnected, output is a Minimum Spanning Forest
+ * Implementation does not take into account Edge Directions, i.e. the following edges in the
+ * input graph are treated equivalently: Source -> Target, Source <- Target and Source <-> Target.
+ * That is, every directed edge of the input graph is complemented with the reverse directed edge
+ * of the same weight (the complementary edges never appear in the output).
+
+ * The basic algorithm is descibed here: http://www.vldb.org/pvldb/vol7/p1047-han.pdf, and works
+ * as follows: In the first phase, each vertex finds a minimum weight out-edge. These edges are
+ * added to intermediate MST (i.e. MST at current iteration step). In the second phase, vertices
+ * perform Summarization algorithm, using information about Connected Components in intermediate
+ * MST. In the third phase, vertices perform edges cleaning. The graph gets smaller and smaller,
+ * and the algorithm terminates when only unconnected vertices (i.e. no more Edges) remain.
  * The program returns the resulting graph, which represents the MST (or Forest) of the input graph
  */
 
 public class MY_MST <K, VV, EV extends Comparable<EV>>
         implements GraphAlgorithm<Long, NullValue, Double, Graph<Long, NullValue, Double>> {
 
-    //Implemented in while loop
+    //Maximum number of the while loop iterations
     private Integer maxIterations;
-    //goes to ConnectedComponents
+    //Maximum number of iterations in GSAConnectedComponents
     //private Integer maxIterations2=10;
     private Integer maxIterations2;
 
@@ -82,10 +82,10 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
 
         /**
          * Create working graph with </String> Vertex Values - (!) Currently only String values are
-         * acceptable by Summarization library.
+         * supported in Summarization method.
          *
          * Each Vertex Value corresponds to its Connected Component
-         * Each Edge Value stores its Original Sourse and Target values, and Edge Value
+         * Each Edge Value stores its Original Source and Target values, and Edge Value
          * Vertex<VertexID,NullValue> -> Vertex<VertexID,ConComp=(String)VertexID>
          * Edge<SourceID,TargetID,Double> -> Edge<SourceID,TargetID,<Double,OriginalSourseID,OriginalTargetID>>
          */
@@ -100,16 +100,16 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
         Graph<Long, String, Double> MSTGraph = null;
 
         /**
-         * Iterate while working graph has more that 1 Vertex or Number of Iterations < maxIterations
+         * Iterate while working graph has more than 1 Vertex and Number of Iterations < maxIterations
          *
-         * "while" loop has to be changed to Bulk/Delta iterations AFTER nested iterations will be allowed in Flink
+         * "while" loop has to be changed to Bulk/Delta iterations WHEN nested iterations will be supported in Flink
          */
         int numberOfIterations=0;
         while (graphWork.getVertices().count()>1 && numberOfIterations<maxIterations) {
 
             numberOfIterations++;
 
-            //This set potentially might convert to IterativeDataSet
+            //This set may later be defined as IterativeDataSet
             DataSet<Edge<Long, Tuple3<Double, Long, Long>>> CurrentEdges = graphWork.getEdges();
 
             /**
@@ -153,7 +153,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
 
             DataSet<Vertex<Long, String>> FinalVertices = CompressedGraph.mapVertices(new ExtractVertVal ()).getVertices();
 
-            //collect data for the next loop iteration or quit iteration
+            //collect data for the next loop iteration or finish loop execution
             if (FinalEdges.count()>0) {
                 graphWork = Graph.fromDataSet(FinalVertices, FinalEdges, env);
             }
@@ -203,7 +203,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
     /**
      * For given vertex find edge with min(VV) and change VV type from </Tuple3> to </Double>.
      * If vertex has multiple edges with the same min(VV), output edge with min(TargetSource)
-     * This allows for graphs with non-distinct edges
+     * This allows for graphs with not necessarily distinct edge weights
      */
 
     private static final class SelectMinWeight
@@ -236,7 +236,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
      * For given vertex find edge with min(VV) and change VV type from </Summarization.EdgeValue</Tuple3>>
      * to </Tuple3>.
      * If vertex has multiple edges with the same min(VV), output edge with min(OriginalTargetSource)
-     * This allows for graphs with non-distinct edges
+     * This allows for graphs with not necessarily distinct edge weights
      */
 
     private static final class SelectMinWeight2
@@ -270,7 +270,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
     }
 
     /**
-     * For given vertex extract </String> VV out of </Summarization.VertexValue<String>>>
+     * For given vertex, extract </String> VV out of </Summarization.VertexValue<String>>>
      */
 
     @SuppressWarnings("serial")
@@ -283,7 +283,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
     }
 
     /**
-     * For given vertex delete all loop Edges
+     * For given vertex, delete all self Edges
      */
 
     @SuppressWarnings("serial")

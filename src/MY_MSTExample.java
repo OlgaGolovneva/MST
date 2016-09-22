@@ -72,10 +72,10 @@ public class MY_MSTExample implements ProgramDescription {
         Graph<Long, NullValue, Double> result=graph
                 .run(new MY_MST<Long, NullValue, Double>(maxIterations));
 
-        // Extract the Edges as the result
+        // Extract Edges from result
         DataSet<Edge<Long, Double>> MSTEdges = result.getEdges();
 
-        // Extract the Vertices as the result
+        // Extract Vertices from result
         DataSet<Vertex<Long, NullValue>> MSTVertices = result.getVertices();
 
         // emit result
