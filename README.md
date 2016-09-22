@@ -1,5 +1,5 @@
 # Minimum Spanning Tree
-* This implementation uses Boruvka's algorithm to create the Minimum Spanning Tree (MST)
+* This implementation uses Boruvka's algorithm to find a Minimum Spanning Tree (MST)
  * Implementation ALLOWS FOR disconnected, directed graph (See MY_MSTDefaultData for Examples)
  * If graph is disconnected, output is a Minimum Spanning Forest
  * Implementation does not take into account Edge Directions, i.e. Sorce -> Target, Sorce <- Target and Sorce <-> Target are equivalent
