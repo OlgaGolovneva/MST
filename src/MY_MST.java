@@ -24,7 +24,10 @@ package org.apache.flink.graph.library;
  */
 
 import org.apache.flink.api.common.functions.FilterFunction;
+import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.typeinfo.BasicTypeInfo;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.FunctionAnnotation;
@@ -73,12 +76,17 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
         this.maxIterations2 = maxIterations;
     }
 
+    final TypeInformation<Long> longType = BasicTypeInfo.LONG_TYPE_INFO;
+    final TypeInformation<Double> doubleType = BasicTypeInfo.DOUBLE_TYPE_INFO;
+
     @Override
     public Graph<Long, NullValue, Double> run(Graph<Long, NullValue, Double> graph) throws Exception {
 
         ExecutionEnvironment env =graph.getContext();
 
-        Graph<Long, NullValue, Double> undirectedGraph = graph.getUndirected();
+        DataSet<Edge<Long, Double>> undirectedGraphE = graph.getUndirected().getEdges().distinct();
+
+        Graph<Long, NullValue, Double> undirectedGraph = Graph.fromDataSet(undirectedGraphE,env);
 
         /**
          * Create working graph with </String> Vertex Values - (!) Currently only String values are
@@ -90,7 +98,9 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
          * Edge<SourceID,TargetID,Double> -> Edge<SourceID,TargetID,<Double,OriginalSourseID,OriginalTargetID>>
          */
         Graph<Long, String, Double> InVertGr=undirectedGraph.mapVertices(new InitializeVert ());
-        Graph<Long, String, Tuple3<Double,Long,Long>> graphWork=InVertGr.mapEdges(new InitializeEdges ());
+
+        Graph<Long, String, Tuple3<Double, Long, Long>> graphWork =
+                InVertGr.mapEdges(new InitializeEdges ());
 
         /**
          * Create MSTGraph with NO Edges
@@ -137,7 +147,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
              * Use Summarize to create/edit SuperVertices in ORIGINAL graph
              */
 
-            Graph<Long, Summarization.VertexValue<String>, Summarization.EdgeValue<Tuple3<Double, Long, Long>>> CompressedGraph =
+            Graph<Long, Summarization.VertexValue<String>, Summarization.EdgeValue<Tuple3<Double, Long, Long>>> CompressedGraph1 =
                     Graph.fromDataSet(UpdateConComp, CurrentEdges, env)
                             .run(new Summarization<Long, String, Tuple3<Double, Long, Long>>());
 
@@ -146,10 +156,14 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
              * 2) select minWeightEdge and go back to original VV type
              */
 
-            CompressedGraph = CompressedGraph.filterOnEdges(new CleanEdges<Long, Summarization.EdgeValue<Tuple3<Double,Long,Long>>>());
+            Graph<Long, Summarization.VertexValue<String>, Summarization.EdgeValue<Tuple3<Double, Long, Long>>> CompressedGraph =
+                    CompressedGraph1.filterOnEdges(new CleanEdges<Long, Summarization.EdgeValue<Tuple3<Double,Long,Long>>>());
 
             DataSet<Edge<Long, Tuple3<Double, Long, Long>>> FinalEdges =
-                    CompressedGraph.groupReduceOnEdges(new SelectMinWeight2(), EdgeDirection.OUT);
+                    CompressedGraph.getEdges()
+                    .groupBy(0,1)
+                    .reduceGroup(new SelectMinEdge());
+
 
             DataSet<Vertex<Long, String>> FinalVertices = CompressedGraph.mapVertices(new ExtractVertVal ()).getVertices();
 
@@ -157,13 +171,17 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
             if (FinalEdges.count()>0) {
                 graphWork = Graph.fromDataSet(FinalVertices, FinalEdges, env);
             }
-            else numberOfIterations=maxIterations;
+            else {
+                numberOfIterations=maxIterations;
+            }
         }
 
+
         //Final solution
-        Graph<Long, NullValue, Double> MSTout=Graph.fromDataSet(graph.getVertices(), MSTGraph.getEdges(),env)
-                .getUndirected()
-                .intersect(graph,true);
+        DataSet<Edge<Long, Double>> MST=Graph.fromDataSet(graph.getVertices(), MSTGraph.getEdges().distinct(),env).getUndirected()
+                .getEdges().distinct();
+
+        Graph<Long, NullValue, Double> MSTout=Graph.fromDataSet(graph.getVertices(), MST, env).intersect(graph,true);
 
         return MSTout;
     }
@@ -261,11 +279,12 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
                     minEdge=tuple.f1;
                 }
             }
-            if (minEdge!= null)
+            if (minEdge!= null) {
                 outEdge.setSource(minEdge.getSource());
                 outEdge.setTarget(minEdge.getTarget());
                 outEdge.setValue(minEdge.getValue().f0);
                 out.collect(outEdge);
+            }
         }
     }
 
@@ -292,6 +311,37 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
         @Override
         public boolean filter(Edge<T, ET> value) throws Exception {
             return !(value.f0.compareTo(value.f1)==0);
+        }
+    }
+
+    public static class SelectMinEdge implements GroupReduceFunction<Edge<Long, Summarization.EdgeValue<Tuple3<Double, Long, Long>>>,
+            Edge<Long, Tuple3<Double,Long,Long>>> {
+
+        @Override
+        public void reduce(Iterable<Edge<Long, Summarization.EdgeValue<Tuple3<Double, Long, Long>>>> edges,
+                Collector<Edge<Long, Tuple3<Double,Long,Long>>> out) throws Exception {
+
+            Double minVal = Double.MAX_VALUE;
+            Edge<Long,Summarization.EdgeValue<Tuple3<Double,Long,Long>>> minEdge = null;
+            Edge<Long,Tuple3<Double,Long,Long>> outEdge= new Edge();
+
+            for (Edge<Long, Summarization.EdgeValue<Tuple3<Double,Long,Long>>> tuple : edges)
+            {
+                if (tuple.getValue().f0.f0 < minVal)
+                {
+                    minVal = tuple.getValue().f0.f0;
+                    minEdge = tuple;
+                }
+                else if (tuple.getValue().f0.f0 == minVal && tuple.getValue().f0.f2<minEdge.getValue().f0.f2){
+                    minEdge=tuple;
+                }
+            }
+            if (minEdge!= null) {
+                outEdge.setSource(minEdge.getSource());
+                outEdge.setTarget(minEdge.getTarget());
+                outEdge.setValue(minEdge.getValue().f0);
+                out.collect(outEdge);
+            }
         }
     }
 }
