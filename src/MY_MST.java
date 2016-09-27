@@ -178,7 +178,7 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
 
 
         //Final solution
-        DataSet<Edge<Long, Double>> MST=Graph.fromDataSet(graph.getVertices(), MSTGraph.getEdges().distinct(),env).getUndirected()
+        DataSet<Edge<Long, Double>> MST=Graph.fromDataSet(MSTGraph.getEdges().distinct(),env).getUndirected()
                 .getEdges().distinct();
 
         Graph<Long, NullValue, Double> MSTout=Graph.fromDataSet(graph.getVertices(), MST, env).intersect(graph,true);
@@ -313,6 +313,13 @@ public class MY_MST <K, VV, EV extends Comparable<EV>>
             return !(value.f0.compareTo(value.f1)==0);
         }
     }
+
+    /**
+     * For given vertex find all duplicated edges. Select edge with min(VV) and change VV type from </Summarization.EdgeValue</Tuple3>>
+     * to </Tuple3>.
+     * If vertex has multiple edges with the same min(VV), output edge with min(OriginalTargetSource)
+     * This allows for graphs with not necessarily distinct edge weights
+     */
 
     public static class SelectMinEdge implements GroupReduceFunction<Edge<Long, Summarization.EdgeValue<Tuple3<Double, Long, Long>>>,
             Edge<Long, Tuple3<Double,Long,Long>>> {
