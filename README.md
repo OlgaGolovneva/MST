@@ -2,7 +2,6 @@
 * This implementation uses Boruvka's algorithm to find a Minimum Spanning Tree (MST)
  * A minimum spanning tree is a spanning tree of a connected, undirected graph. It connects all the vertices together with the minimal total weighting for its edges.
  * A single graph can have many different spanning trees, this algorithm returns one of them
- * Implementation ALLOWS FOR disconnected, directed input graph (See MY_MSTDefaultData for Examples)
  * If the input graph is disconnected, output is a Minimum Spanning Forest
  * Implementation does not take into account Edge Directions, i.e. the following edges in the input graph are treated equivalently: Source -> Target, Source <- Target and Source <-> Target. That is, every directed edge of the input graph is complemented with the reverse directed edge of the same weight (the complementary edges never appear in the output).
  
