@@ -174,7 +174,6 @@ public class MinimumSpanningTree
 
     private static final class InitializeVert implements MapFunction<Vertex<Short, NullValue>, String> {
 
-        public InitializeVert() {}
         @Override
         public String map(Vertex<Short, NullValue> vertex) throws Exception {
             return Short.toString(vertex.f0);
@@ -188,7 +187,6 @@ public class MinimumSpanningTree
     private static final class InitializeEdges
             implements MapFunction<Edge<Short, Float>, Tuple3<Float, Short, Short>> {
 
-        public InitializeEdges() {}
         @Override
         public Tuple3<Float, Short, Short> map(Edge<Short, Float> edge) throws Exception {
             return new Tuple3(edge.f2,edge.f0,edge.f1);
