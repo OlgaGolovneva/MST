@@ -31,29 +31,29 @@ import org.apache.flink.types.NullValue;
 /**
  * This example shows how to use Gelly's library method.
  * You can find all available library methods in {@link org.apache.flink.graph.library}.
- *
+ * <p>
  * In particular, this example uses the {@link MinimumSpanningTree}
- * library method to compute the connected components of the input graph.
- *
+ * library method to compute the Minimum Spanning Tree of the input graph.
+ * <p>
  * The input file is a plain text file and must be formatted as follows:
  * Edges are represented by tuples of srcVertexId, trgVertexId and Weight (Value, Distance) which are
  * separated by tabs. Edges themselves are separated by newlines.
  * For example: <code>1\t2\t0.3\n1\t3\t1.5\n</code> defines two edges,
  * 1-2 with weight 0.3, and 1-3 with weigth 1.5.
- *
+ * <p>
  * Usage <code>MST &lt;edge path&gt; &lt;result path&gt;
  * &lt;number of iterations&gt; </code><br>
- *
+ * <p>
  * If no parameters are provided, the program is run with default data from
- * {@link MSTDefaultData}
+ * {@link MSTDefaultData}.
  */
 
 public class MinimumSpanningTreeExample implements ProgramDescription {
 
     @SuppressWarnings("serial")
-    public static void main(String [] args) throws Exception {
+    public static void main(String[] args) throws Exception {
 
-        if(!parseParameters(args)) {
+        if (!parseParameters(args)) {
             return;
         }
 
@@ -63,24 +63,23 @@ public class MinimumSpanningTreeExample implements ProgramDescription {
 
         Graph<Short, NullValue, Float> graph = Graph.fromDataSet(edges, env);
 
-        // Find MST of the given graph
-        Graph<Short, NullValue, Float> result=graph
+        // Find Minimum Spanning Tree of the given graph
+        Graph<Short, NullValue, Float> result = graph
                 .run(new MinimumSpanningTree(maxIterations));
 
-        // Extract Edges from result
+        // Extract Edges from the resulted graph
         DataSet<Edge<Short, Float>> MSTEdges = result.getEdges();
 
-        // emit result
-        if(fileOutput) {
+        // Emit result
+        if (fileOutput) {
             MSTEdges.writeAsCsv(outputPath, "\n", ",");
-
-            // since file sinks are lazy, we trigger the execution explicitly
+            // Since file sinks are lazy, we trigger the execution explicitly
             env.execute("Minimum Spanning Tree");
         } else {
 
             MSTEdges.print();
 
-            System.out.println("Correct answer:\n" + MSTDefaultData.RESULTED_MST);
+            System.out.println("Correct answer:\n" + MSTDefaultData.getDefaultResultedMST());
         }
 
     }
@@ -105,7 +104,7 @@ public class MinimumSpanningTreeExample implements ProgramDescription {
     private static boolean parseParameters(String[] args) {
 
         if (args.length > 0) {
-            if(args.length != 3) {
+            if (args.length != 3) {
                 System.err.println("Usage: MST  <input edges path> <output path> <num iterations>");
                 return false;
             }

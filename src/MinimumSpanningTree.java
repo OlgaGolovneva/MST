@@ -35,22 +35,26 @@ import org.apache.flink.graph.Vertex;
 import org.apache.flink.graph.GraphAlgorithm;
 
 /**
- * This implementation uses Boruvka's algorithm to find a Minimum Spanning Tree (MST)
+ * This class implements Boruvka's algorithm ["On a certain minimal problem."
+ * Praca Moravske Prirodovedecke Spolecnosti 3 (1926): 37-58.] for finding a Minimum Spanning Tree (MST).
  * A minimum spanning tree is a spanning tree of a connected, undirected graph. It connects
  * all the vertices together with the minimal total weighting for its edges.
- * A single graph can have many different spanning trees, this algorithm returns one of them
- * If the input graph is disconnected, output is a Minimum Spanning Forest
- * Implementation does not take into account Edge Directions, i.e. the following edges in the
+ * A single graph can have many different spanning trees, this algorithm returns one of them.
+ * If the input graph is disconnected, output is a Minimum Spanning Forest.
+ *
+ * This implementation does not take into account Edge Directions, i.e. the following edges in the
  * input graph are treated equivalently: Source -> Target, Source <- Target and Source <-> Target.
  * That is, every directed edge of the input graph is complemented with the reverse directed edge
- * of the same weight.
+ * of the same weight. The output graph is always undirected.
+ *
  * The basic algorithm is described here: http://www.vldb.org/pvldb/vol7/p1047-han.pdf, and works
  * as follows: In the first phase, each vertex finds a minimum weight out-edge. These edges are
  * added to intermediate MST (i.e. MST at current iteration step). In the second phase, vertices
  * perform Summarization algorithm, using information about Connected Components in intermediate
  * MST. In the third phase, vertices perform edges cleaning. The graph gets smaller and smaller,
- * and the algorithm terminates when only unconnected vertices (i.e. no more Edges) remain.
- * The program returns the resulting graph, which represents the MST (or Forest) of the input graph
+ * and the algorithm terminates when only unconnected vertices (i.e. no more edges) remain.
+ *
+ * The program returns the resulting graph, which represents an MST (or Forest) of the input graph.
  */
 
 //public class MinimumSpanningTree <K, VV, EV extends Comparable<EV>>
@@ -59,8 +63,9 @@ public class MinimumSpanningTree
 
     //Maximum number of the while loop iterations
     private final Integer maxIterations;
+
     //Maximum number of iterations in GSAConnectedComponents
-    //may be different than maxIterations
+    //may differ from maxIterations
     private final Integer maxIterationsGSA;
 
     public MinimumSpanningTree(Integer maxIterations) {
@@ -71,97 +76,89 @@ public class MinimumSpanningTree
     @Override
     public Graph<Short, NullValue, Float> run(Graph<Short, NullValue, Float> graph) throws Exception {
 
-        ExecutionEnvironment env =graph.getContext();
+        ExecutionEnvironment env = graph.getContext();
 
-        DataSet<Edge<Short, Float>> undirectedGraphE = graph.getUndirected().getEdges().distinct();
+        DataSet<Edge<Short, Float>> undirectedGraphEdges = graph.getUndirected().getEdges().distinct();
+        Graph<Short, NullValue, Float> undirectedGraph = Graph.fromDataSet(undirectedGraphEdges,env);
 
-        Graph<Short, NullValue, Float> undirectedGraph = Graph.fromDataSet(undirectedGraphE,env);
+        // Create working graph with </String> Vertex Values - (!) Currently only String values are
+        // supported in Summarization method.
+        // Each Vertex Value corresponds to its Connected Component.
+        // Each Edge Value stores its Original Source and Target vertices, and its original Edge Value (weight)
+        // Vertex<VertexID,NullValue> -> Vertex<VertexID,ConComp=(String)VertexID>
+        // Edge<SourceID,TargetID,Float> -> Edge<SourceID,TargetID,<Float,OriginalSourceID,OriginalTargetID>>
 
-        /**
-         * Create working graph with </String> Vertex Values - (!) Currently only String values are
-         * supported in Summarization method.
-         * Each Vertex Value corresponds to its Connected Component
-         * Each Edge Value stores its Original Source and Target values, and Edge Value
-         * Vertex<VertexID,NullValue> -> Vertex<VertexID,ConComp=(String)VertexID>
-         * Edge<SourceID,TargetID,Float> -> Edge<SourceID,TargetID,<Float,OriginalSourceID,OriginalTargetID>>
-         */
-
-       Graph<Short, String, Tuple3<Float, Short, Short>> graphWork = undirectedGraph
+        Graph<Short, String, Tuple3<Float, Short, Short>> workGraph = undirectedGraph
                 .mapVertices(new InitializeVert ())
                 .mapEdges(new InitializeEdges ());
 
-        /**
-         * This graph will contain intermediate solution, i.e. we will collect MST edges in MSTGraph
-         */
 
-        Graph<Short, String, Float> MSTGraph = null;
+        // This graph will contain current solution, i.e., we will collect MST edges in mstGraph.
+        Graph<Short, String, Float> mstGraph = null;
 
-        /**
-         * Iterate while working graph has more than 1 Vertex and Number of Iterations < maxIterations
-         *
-         * "while" loop has to be changed to Bulk/Delta iterations WHEN nested iterations will be supported in Flink
-         */
 
+         // Iterate while adding new edges and Number of Iterations < maxIterations.
+         //
+         // "while" loop should be changed to Bulk/Delta iterations WHEN nested iterations will be supported in Flink.
+         //
         int numberOfIterations=0;
-        while (graphWork.getVertices().count()>1 && numberOfIterations<maxIterations) {
+        boolean addedNewEdges = true;
+        while (addedNewEdges && numberOfIterations<maxIterations) {
 
             numberOfIterations++;
 
-            //This set may later be defined as IterativeDataSet
-            DataSet<Edge<Short, Tuple3<Float, Short, Short>>> CurrentEdges = graphWork.getEdges();
+            // This set should later be defined as IterativeDataSet (WHEN nested iterations will be supported in Flink)
+            DataSet<Edge<Short, Tuple3<Float, Short, Short>>> currentEdges = workGraph.getEdges();
 
-            /**
-             * Find a (not necessary connected) subgraph, which contains for each vertex Edges with min(EV)
-             * Iterates function SelectMinWeight over all the vertices in graph
-             */
-            DataSet<Edge<Short, Float>> MinEdgeTuples =
-                    graphWork.groupReduceOnEdges(new SelectMinWeight (), EdgeDirection.OUT);
+            // Iterates function SelectMinWeight over all the vertices in graph.
+            // Finds a shortest adjacent edge for each vertex.
+            // Returns a (not necessary connected) subgraph consisting of those edges.
+            DataSet<Edge<Short, Float>> minEnges =
+                    workGraph.groupReduceOnEdges(new SelectMinWeight(), EdgeDirection.OUT);
 
             //Collect intermediate results
-            if (MSTGraph == null) {
-                MSTGraph = Graph.fromDataSet(graphWork.getVertices(), MinEdgeTuples, env);
+            if (mstGraph == null) {
+                mstGraph = Graph.fromDataSet(workGraph.getVertices(), minEnges, env);
             } else {
-                MSTGraph = MSTGraph.union(Graph.fromDataSet(graphWork.getVertices(), MinEdgeTuples, env));
+                mstGraph = mstGraph.union(Graph.fromDataSet(workGraph.getVertices(), minEnges, env));
             }
 
-            /**
-             * Use GSAConnectedComponents to find connected components in the output graph
-             */
+             // Find connected components of mstGraph.
+            DataSet<Vertex<Short, String>> updatedConnectedComponents =
+                    mstGraph.run(new GSAConnectedComponents<Short, String, Float>(maxIterationsGSA));
 
-            DataSet<Vertex<Short, String>> UpdateConnectedComponents =
-                    MSTGraph.run(new GSAConnectedComponents<Short, String, Float>(maxIterationsGSA));
 
-            /**
-             * Use Summarize to create/edit SuperVertices in ORIGINAL graph
-             * "Clean" the resulting graph graph: 1) delete loops
-             * 2) select minWeightEdge and go back to original VV type
-             */
+             // Use Summarize to create/update SuperVertices in the ORIGINAL graph
+             // "Clean" the resulting graph:
+             // 1) delete loops
+             // 2) select minWeightEdge and go back to original VV type
 
-            Graph<Short, Summarization.VertexValue<String>, Summarization.EdgeValue<Tuple3<Float, Short, Short>>> CompressedGraph =
-                        Graph.fromDataSet(UpdateConnectedComponents, CurrentEdges, env)
+            Graph<Short, Summarization.VertexValue<String>, Summarization.EdgeValue<Tuple3<Float, Short, Short>>> compressedGraph =
+                        Graph.fromDataSet(updatedConnectedComponents, currentEdges, env)
                             .run(new Summarization<Short, String, Tuple3<Float, Short, Short>>())
                             .filterOnEdges(new CleanEdges<Short, Summarization.EdgeValue<Tuple3<Float,Short,Short>>>());
 
-            DataSet<Edge<Short, Tuple3<Float, Short, Short>>> FinalEdges =
-                    CompressedGraph.getEdges()
+            DataSet<Edge<Short, Tuple3<Float, Short, Short>>> finalEdges =
+                    compressedGraph.getEdges()
                             .groupBy(0,1)
                             .reduceGroup(new SelectMinEdge());
 
-            DataSet<Vertex<Short, String>> FinalVertices = CompressedGraph.mapVertices(new ExtractVertVal ()).getVertices();
+            DataSet<Vertex<Short, String>> finalVertices = compressedGraph.mapVertices(new ExtractVertVal ()).getVertices();
 
-            //Collect data for the next loop iteration or finish loop execution
-            if (FinalEdges.count()>0) {
-                graphWork = Graph.fromDataSet(FinalVertices, FinalEdges, env);
+            // Collect data for the next loop iteration or finish loop execution
+            if (finalEdges.count()>0) {
+                workGraph = Graph.fromDataSet(finalVertices, finalEdges, env);
             }
             else {
-                numberOfIterations=maxIterations;
+                // Quit loop.
+                addedNewEdges = false;
             }
         }
 
         //Final solution
-        DataSet<Edge<Short, Float>> MSTEdges=Graph.fromDataSet(MSTGraph.getEdges(),env).getUndirected().getEdges().distinct();
+        DataSet<Edge<Short, Float>> mstEdges=Graph.fromDataSet(mstGraph.getEdges(),env).getUndirected().getEdges().distinct();
 
-        return Graph.fromDataSet(graph.getVertices(), MSTEdges, env);
+        return Graph.fromDataSet(graph.getVertices(), mstEdges, env);
     }
 
     // *************************************************************************
@@ -169,10 +166,12 @@ public class MinimumSpanningTree
     // *************************************************************************
 
     /**
-     * Each VV corresponds to its </String> Connected Component (CC) in MST Graph.
-     * Before iterations, the number of CC is equal to the number of Vertices (MST Graph has NO edges)
-     * </String> is used only to make Summarization work correctly
+     * Initialize vetrex value with a string representing its connected component number
+     * (initially the connected component nmber equals the vertex ID).
+     * The type </String> is used only to make Summarization work correctly,
+     * should be later changed to the Vertex ID type (WHEN Summarization with non-String types will be supported in Flink).
      */
+
     @SuppressWarnings("serial")
     public static final class InitializeVert implements MapFunction<Vertex<Short, NullValue>, String> {
 
@@ -197,9 +196,9 @@ public class MinimumSpanningTree
     }
 
     /**
-     * For given vertex find edge with min(VV) and change VV type from </Tuple3> to </Float>.
-     * If vertex has multiple edges with the same min(VV), output edge with min(TargetSource)
-     * This allows for graphs with not necessarily distinct edge weights
+     * For each vertex, find an edge with min(VV) and change VV type from </Tuple3> to </Float>.
+     * If vertex has multiple edges with the same min(VV), output the edge with min(TargetSource).
+     * This allows for graphs with not necessarily distinct edge weights.
      */
     private static final class SelectMinWeight
             implements EdgesFunction<Short,Tuple3<Float,Short,Short>,Edge<Short, Float>> {
@@ -214,10 +213,10 @@ public class MinimumSpanningTree
                 if (tuple.f1.getValue().f0.compareTo(minVal)<0)
                 {
                     minVal = tuple.f1.getValue().f0;
-                    //Original Source and Target!!!!
+                    // Original Source and Target.
                     minEdge=new Edge(tuple.f1.getValue().f1, tuple.f1.getValue().f2,minVal);
                 }
-                //we need to take into account equal edges!
+                // We need to take introduce an order on edges of the same weight.
                 else if (tuple.f1.getValue().f0.compareTo(minVal) == 0 && tuple.f1.getValue().f2.compareTo(minEdge.getTarget())<0){
                     minEdge=new Edge(tuple.f1.getValue().f1, tuple.f1.getValue().f2,minVal);
                 }
@@ -240,7 +239,7 @@ public class MinimumSpanningTree
     }
 
     /**
-     * For given vertex, delete all self-Edges
+     * For given vertex, delete all self-loops.
      */
     @SuppressWarnings("serial")
     @FunctionAnnotation.ForwardedFields("*->*")
@@ -252,10 +251,10 @@ public class MinimumSpanningTree
     }
 
     /**
-     * For given vertex find all duplicated edges. Select edge with min(VV) and change VV type from </Summarization.EdgeValue</Tuple3>>
-     * to </Tuple3>.
-     * If vertex has multiple edges with the same min(VV), output edge with min(OriginalTargetSource)
-     * This allows for graphs with not necessarily distinct edge weights
+     * For given source and target vertices, find all edges between them and leave only one edge with min(VV).
+     * Also change VV type from </Summarization.EdgeValue</Tuple3>> to </Tuple3>.
+     * If a source vertex has multiple edges with the same min(VV), output edge with min(OriginalTargetSource).
+     * This allows for graphs with not necessarily distinct edge weights.
      */
     private static class SelectMinEdge implements GroupReduceFunction<Edge<Short, Summarization.EdgeValue<Tuple3<Float, Short, Short>>>,
             Edge<Short, Tuple3<Float,Short,Short>>> {

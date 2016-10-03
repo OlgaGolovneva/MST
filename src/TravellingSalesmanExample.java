@@ -40,11 +40,12 @@ import java.util.Stack;
  * You can find all available library methods in {@link org.apache.flink.graph.library}.
  *
  * In particular, this example uses the {@link MinimumSpanningTree}
- * library method to compute the approximate solution of the Metric Travelling Salesman Problem (TSP).
+ * library method to compute an approximate solution to the Metric Travelling Salesman Problem (TSP).
  *
- * The algorithm is based on Christofides' algorithm for the TSP
- * This is a 2-approximation algorithm: it returns a cycle that is at most twice as long
- * as an optimal cycle: C ≤ 2 · OPT
+ * This class implements the 2-approximation algorithm for Metric version of TSP by Kou, Markowsky, and Berman
+ * ["A fast algorithm for Steiner trees." Acta informatica 15.2 (1981): 141-145.]
+ * It always returns a cycle that is at most twice as long
+ * as an optimal cycle: C ≤ 2 · OPT.
  *
  * The input file is a plain text file and must be formatted as follows:
  * Edges are represented by tuples of srcVertexId, trgVertexId and EdgeValue (Distance between srcVertexId and trgVertexId) which are
@@ -52,11 +53,15 @@ import java.util.Stack;
  * For example: <code>1\t2\t0.3\n1\t3\t1.5\n</code> defines two edges,
  * 1-2 with weight 0.3, and 1-3 with weight 1.5.
  *
+ * The algorithm guarantees 2-approximation only for Metric graphs,
+ * i.e., graphs where edge weights satisfy triangle inequality: w(A,B)+w(B,C) >= w(A,C).
+ * In particular, if edges represent distances between points in any Euclidean space (R^n), they do satisfy triangle inequality.
+ *
  * Usage <code>MST &lt;edge path&gt; &lt;result path for TSP&gt; &lt;result path for MST&gt;
  * &lt;number of vertices&gt; &lt;number of iterations&gt; </code><br>
  *
  * If no parameters are provided, the program is run with default data from
- * {@link TSPDefaultData}
+ * {@link TSPDefaultData}.
  */
 
 public class TravellingSalesmanExample implements ProgramDescription{
@@ -76,6 +81,7 @@ public class TravellingSalesmanExample implements ProgramDescription{
         Graph<Short, NullValue, Float> result=Graph.fromDataSet(edges, env)
                 .run(new MinimumSpanningTree(maxIterations));
 
+        // Output MST
         if(fileOutput) {
             result.getEdges().writeAsCsv(outputPathMST, "\n", ",");
             env.execute("MST is written");
@@ -86,15 +92,17 @@ public class TravellingSalesmanExample implements ProgramDescription{
             System.out.println("Correct answer:\n" + TSPDefaultData.RESULTED_MST);
         }
 
+        // List of MST edges
         List<Edge<Short,Float>> MSTedges=result.getEdges().collect();
 
-        //Create a Hamiltonian cycle: Tuple2 < Vertex out, Vertex in >
+        // Compute Hamiltonian cycle as a list of edges (pairs of vertices)
         List<Tuple2<Short,Short>> tspList =
                 HamCycle(MSTedges, numOfPoints);
 
-        //Collect edges - approximate TSP
+        // Collect edges of Hamiltonian cycle in a DataSet
         DataSet<Tuple2<Short,Short>> tspSet = env.fromCollection(tspList);
 
+        // Get edge weights from the original graph
         DataSet<Tuple3<Short,Short,Float>> tspCycle = tspSet
                 .join(edges)
                 .where(0,1)
@@ -107,7 +115,7 @@ public class TravellingSalesmanExample implements ProgramDescription{
                     }
                 });
 
-        // emit result
+        // Output TSP
         if(fileOutput) {
             tspCycle.writeAsCsv(outputPath, "\n", ",");
             env.execute("Metric TSP solution");
@@ -177,26 +185,37 @@ public class TravellingSalesmanExample implements ProgramDescription{
         }
     }
 
-    /*
-     * Walk through all vertices exactly once using MST
-     * Create list of pairs Source-Target
-     * DFS-based method
+    /**
+     * This method computes a Hamiltonian cycle from a Minimum Spanning Tree.
+     * For Metric graphs (w(A,B)+w(B,C) >= w(A,C)) the resulting Hamiltonian cycle is within a factor of two of the optimal one.
+     * @param edges Edges of a Minimum Spanning Tree
+     * @param n Number of vertices
+     * @return list of pairs of vertices - edges of a Hamiltonian cycle computed from the provided Minimum Spanning Tree
      */
     private static List<Tuple2<Short,Short>> HamCycle (List<Edge<Short,Float>> edges, int n)
     {
+        // Compose adjacency lists of the graph.
         List<List<Short>> adj = new ArrayList<>(n+1);
         for (int i=0; i<=n; i++)
             adj.add(new ArrayList<Short>());
         for(Edge<Short,Float> edge : edges)
             adj.get(edge.f0.intValue()).add(edge.f1);
 
+        // List of edges of Hamiltonian Path
         List<Tuple2<Short,Short>> result = new ArrayList<>();
-        Short root = new Short((short)1);  //arbitrary vertex
+
+        // Arbitrary vertex is selected to be the root
+        Short root = (short)1;
         Short prev = root;
-        Stack<Short> dfs = new Stack<>();
-        dfs.push(root);
+
+        // marked[i]=true iff the vertex i has been visited.
         boolean[] marked = new boolean[n+1];
         marked[root.intValue()]=true;
+
+        // Depth-First Search
+        Stack<Short> dfs = new Stack<>();
+        dfs.push(root);
+
         while (!dfs.empty())
         {
             Short curVert = dfs.peek();

@@ -29,106 +29,120 @@ public class MSTDefaultData {
 
     public static final Integer MAX_ITERATIONS = 3;
 
-    //CHOOSE ANY TEST OR CREATE A NEW ONE
-
-    /** TEST 1
-     * Simple Data Set
-     * in this case, there is ONLY 1 MST
-     */
-/*    public static final String EDGES = "1\t2\t1.0\n" + "1\t4\t3.0\n" + "2\t3\t6.0\n"+ "2\t4\t5.0\n"+ "2\t5\t1.0\n" +
-            "3\t5\t5.0\n" + "3\t6\t2.0\n" + "4\t5\t1.0\n" + "5\t6\t4.0";
-
-    public static final Object[][] DEFAULT_EDGES = new Object[][] {
-            new Object[]{1, 2, 1.0},
-            new Object[]{1, 4, 3.0},
-            new Object[]{2, 3, 6.0},
-            new Object[]{2, 4, 5.0},
-            new Object[]{2, 5, 1.0},
-            new Object[]{3, 5, 5.0},
-            new Object[]{3, 6, 2.0},
-            new Object[]{4, 5, 1.0},
-            new Object[]{5, 6, 4.0}
+    // TEST 1. Multiple MSTs.
+    // Cyclic undirected graph that has several Minimum Spanning Trees.
+    private static final Object[][] MULTIPLE_EDGES = new Object[][] {
+            new Object[]{(short)1, (short)2, 1.0f},
+            new Object[]{(short)1, (short)3, 1.0f},
+            new Object[]{(short)2, (short)1, 1.0f},
+            new Object[]{(short)2, (short)3, 1.0f},
+            new Object[]{(short)3, (short)1, 1.0f},
+            new Object[]{(short)3, (short)2, 1.0f}
     };
 
-    public static final String RESULTED_MST =  "1\t2\t1.0\n" + "2\t5\t1.0\n" + "3\t6\t2.0\n" +
+    private static final String MULTIPLE_MST =  "1\t2\t1.0\n" +  "1\t3\t1.0\n" + "2\t1\t1.0\n" + "3\t1\t1.0";
+
+
+    // TEST 2. Directed.
+    // Cyclic directed graph with distinct edge weights. Thus, there is only one Minimum Spanning Tree.
+
+    private static final Object[][] DIRECTED_EDGES = new Object[][] {
+            new Object[]{(short)1, (short)2, 1.0f},
+            new Object[]{(short)1, (short)3, 4.0f},
+            new Object[]{(short)2, (short)1, 2.0f},
+            new Object[]{(short)2, (short)3, 8.0f},
+            new Object[]{(short)3, (short)1, 3.0f},
+            new Object[]{(short)3, (short)2, 6.0f}
+    };
+
+    private static final String DIRECTED_MST =  "1\t2\t1.0\n" + "3\t1\t3.0";
+
+
+    // TEST 3. One MST.
+    // Connected Directed Graph with non-distinct edge weights but containing ONLY 1 Minimum Spanning Tree.
+
+    private static final Object[][] ONE_EDGES = new Object[][] {
+            new Object[]{(short)1, (short)2, 1.0f},
+            new Object[]{(short)1, (short)4, 3.0f},
+            new Object[]{(short)2, (short)3, 6.0f},
+            new Object[]{(short)2, (short)4, 5.0f},
+            new Object[]{(short)2, (short)5, 1.0f},
+            new Object[]{(short)3, (short)5, 5.0f},
+            new Object[]{(short)3, (short)6, 2.0f},
+            new Object[]{(short)4, (short)5, 1.0f},
+            new Object[]{(short)5, (short)6, 4.0f}
+    };
+
+    private static final String ONE_MST =  "1\t2\t1.0\n" + "2\t5\t1.0\n" + "3\t6\t2.0\n" +
             "4\t5\t1.0\n" + "5\t6\t4.0";
-*/
-    /** TEST 2
-     * Cyclic undirected graph with equal EV. Multiple outputs are possible
-     */
 
-/*    public static final String EDGES = "1\t2\t1.0\n" + "1\t3\t1.0\n" + "2\t1\t1.0\n"+ "2\t3\t1.0\n"+ "3\t1\t1.0\n" +
-            "3\t2\t1.0";
 
-    public static final Object[][] DEFAULT_EDGES = new Object[][] {
-            new Object[]{1L, 2L, 1.0},
-            new Object[]{1L, 3L, 1.0},
-            new Object[]{2L, 1L, 1.0},
-            new Object[]{2L, 3L, 1.0},
-            new Object[]{3L, 1L, 1.0},
-            new Object[]{3L, 2L, 1.0}
+    // TEST 4. Default.
+    // Disconnected directed graph with cycles.
+
+    private static final Object[][] DEFAULT_EDGES = new Object[][] {
+            new Object[]{(short)1, (short)2, 1.0f},
+            new Object[]{(short)1, (short)4, 3.0f},
+            new Object[]{(short)2, (short)3, 6.0f},
+            new Object[]{(short)2, (short)4, 5.0f},
+            new Object[]{(short)2, (short)5, 1.0f},
+            new Object[]{(short)3, (short)5, 5.0f},
+            new Object[]{(short)3, (short)6, 2.0f},
+            new Object[]{(short)4, (short)5, 1.0f},
+            new Object[]{(short)5, (short)6, 4.0f},
+            new Object[]{(short)7, (short)8, 1.0f},
+            new Object[]{(short)7, (short)9, 1.0f},
+            new Object[]{(short)8, (short)7, 1.0f},
+            new Object[]{(short)8, (short)9, 1.0f},
+            new Object[]{(short)9, (short)7, 1.0f},
+            new Object[]{(short)9, (short)8, 1.0f}
     };
 
-    public static final String RESULTED_MST =  "1\t2\t1.0\n" +  "1\t3\t1.0\n" + "2\t1\t1.0\n" + "3\t1\t1.0";
-*/
-
-    /** TEST 3
-     * Disconnected directed graph with cycles
-     */
-
-    public static final String EDGES = "1\t2\t1.0\n" + "1\t4\t3.0\n" + "2\t3\t6.0\n"+ "2\t4\t5.0\n"+ "2\t5\t1.0\n" +
-            "3\t5\t5.0\n" + "3\t6\t2.0\n" + "4\t5\t1.0\n" + "5\t6\t4.0\n"+"7\t8\t1.0\n" + "7\t9\t1.0\n" + "8\t7\t1.0\n"
-            + "8\t9\t1.0\n"+ "9\t7\t1.0\n" + "9\t8\t1.0";
-
-    public static final Object[][] DEFAULT_EDGES = new Object[][] {
-            new Object[]{1, 2, 1.0},
-            new Object[]{1, 4, 3.0},
-            new Object[]{2, 3, 6.0},
-            new Object[]{2, 4, 5.0},
-            new Object[]{2, 5, 1.0},
-            new Object[]{3, 5, 5.0},
-            new Object[]{3, 6, 2.0},
-            new Object[]{4, 5, 1.0},
-            new Object[]{5, 6, 4.0},
-            new Object[]{7, 8, 1.0},
-            new Object[]{7, 9, 1.0},
-            new Object[]{8, 7, 1.0},
-            new Object[]{8, 9, 1.0},
-            new Object[]{9, 7, 1.0},
-            new Object[]{9, 8, 1.0}
-    };
-
-    public static final String RESULTED_MST =  "1\t2\t1.0\n" + "2\t5\t1.0\n" + "3\t6\t2.0\n" +
+    private static final String DEFAULT_MST =  "1\t2\t1.0\n" + "2\t5\t1.0\n" + "3\t6\t2.0\n" +
             "4\t5\t1.0\n" + "5\t6\t4.0\n"+"7\t8\t1.0\n" +  "7\t9\t1.0\n";
 
 
-    /** TEST 4
-     * Cyclic directed graph with distinct EV
-     */
+    // END OF DATA SETS
 
-/*    public static final String EDGES = "1\t2\t1.0\n" + "1\t3\t4.0\n" + "2\t1\t2.0\n"+ "2\t3\t8.0\n"+ "3\t1\t3.0\n" +
-            "3\t2\t6.0";
 
-    public static final Object[][] DEFAULT_EDGES = new Object[][] {
-            new Object[]{1L, 2L, 1.0},
-            new Object[]{1L, 3L, 4.0},
-            new Object[]{2L, 1L, 2.0},
-            new Object[]{2L, 3L, 8.0},
-            new Object[]{3L, 1L, 3.0},
-            new Object[]{3L, 2L, 6.0}
-    };
+    public static DataSet<Edge<Short, Float>> getEdgeDataSet(ExecutionEnvironment env, int dataSet) {
 
-    public static final String RESULTED_MST =  "1\t2\t1.0\n" + "3\t1\t3.0";
-*/
-    // END OF TEST SETS
+        Object[][] edges;
+        switch (dataSet) {
+            case 1: edges = MULTIPLE_EDGES;
+                break;
+            case 2: edges = DIRECTED_EDGES;
+                break;
+            case 3: edges = ONE_EDGES;
+                break;
+            default: edges = DEFAULT_EDGES;
+                break;
+        }
+        List<Edge<Short, Float>> edgeList = new LinkedList<>();
+        for (Object[] edge : edges) {
+            edgeList.add(new Edge<>((Short)edge[0], (Short)edge[1], (Float)edge[2]));
+        }
+        return env.fromCollection(edgeList);
+    }
+
+    public static String getResultedMST(int dataSet) {
+
+        switch (dataSet) {
+            case 1: return MULTIPLE_MST;
+            case 2: return DIRECTED_MST;
+            case 3: return ONE_MST;
+            default: return DEFAULT_MST;
+        }
+    }
 
     public static DataSet<Edge<Short, Float>> getDefaultEdgeDataSet(ExecutionEnvironment env) {
 
-        List<Edge<Short, Float>> edgeList = new LinkedList<Edge<Short, Float>>();
-        for (Object[] edge : DEFAULT_EDGES) {
-            edgeList.add(new Edge<Short, Float>(((Integer) edge[0]).shortValue(), ((Integer) edge[1]).shortValue(), ((Double) edge[2]).floatValue()));
-        }
-        return env.fromCollection(edgeList);
+        return getEdgeDataSet(env, 0);
+    }
+
+    public static String getDefaultResultedMST() {
+
+        return getResultedMST(0);
     }
 
     private MSTDefaultData() {}
