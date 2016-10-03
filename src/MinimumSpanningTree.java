@@ -172,8 +172,7 @@ public class MinimumSpanningTree
      * should be later changed to the Vertex ID type (WHEN Summarization with non-String types will be supported in Flink).
      */
 
-    @SuppressWarnings("serial")
-    public static final class InitializeVert implements MapFunction<Vertex<Short, NullValue>, String> {
+    private static final class InitializeVert implements MapFunction<Vertex<Short, NullValue>, String> {
 
         public InitializeVert() {}
         @Override
@@ -185,7 +184,8 @@ public class MinimumSpanningTree
     /**
      * Each Edge will store its original Source and Target Vertices along with its VV
      */
-    public static final class InitializeEdges
+
+    private static final class InitializeEdges
             implements MapFunction<Edge<Short, Float>, Tuple3<Float, Short, Short>> {
 
         public InitializeEdges() {}
@@ -200,6 +200,7 @@ public class MinimumSpanningTree
      * If vertex has multiple edges with the same min(VV), output the edge with min(TargetSource).
      * This allows for graphs with not necessarily distinct edge weights.
      */
+
     private static final class SelectMinWeight
             implements EdgesFunction<Short,Tuple3<Float,Short,Short>,Edge<Short, Float>> {
 
@@ -229,7 +230,7 @@ public class MinimumSpanningTree
     /**
      * For given vertex, extract </String> VV out of </Summarization.VertexValue<String>>>
      */
-    @SuppressWarnings("serial")
+
     private static class ExtractVertVal implements MapFunction<Vertex<Short, Summarization.VertexValue<String>>, String> {
 
         @Override
@@ -241,7 +242,7 @@ public class MinimumSpanningTree
     /**
      * For given vertex, delete all self-loops.
      */
-    @SuppressWarnings("serial")
+
     @FunctionAnnotation.ForwardedFields("*->*")
     private static class CleanEdges<T extends Comparable<T>, ET> implements FilterFunction<Edge<T, ET>> {
         @Override
@@ -256,6 +257,7 @@ public class MinimumSpanningTree
      * If a source vertex has multiple edges with the same min(VV), output edge with min(OriginalTargetSource).
      * This allows for graphs with not necessarily distinct edge weights.
      */
+
     private static class SelectMinEdge implements GroupReduceFunction<Edge<Short, Summarization.EdgeValue<Tuple3<Float, Short, Short>>>,
             Edge<Short, Tuple3<Float,Short,Short>>> {
 
