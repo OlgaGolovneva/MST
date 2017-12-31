@@ -10,4 +10,4 @@ The basic algorithm is descibed [here](http://www.vldb.org/pvldb/vol7/p1047-han.
 
 Another algorithm uses the MST library method to compute an approximate solution to the Metric Travelling Salesman Problem (TSP). This class implements the 2-approximation algorithm for Metric version of TSP by Kou, Markowsky, and Berman ["A fast algorithm for Steiner trees." Acta informatica 15.2 (1981): 141-145.]. It always returns a cycle that is at most twice as long as an optimal cycle: C ≤ 2 · OPT.
 
-The algorithm guarantees 2-approximation only for Metric graphs, i.e., graphs where edge weights satisfy triangle inequality: w(A,B)+w(B,C) >= w(A,C). In particular, if edges represent distances between points in any Euclidean space (R^n), they do satisfy triangle inequality.
+The algorithm guarantees 2-approximation only for Metric graphs, i.e., graphs where edge weights satisfy triangle inequality:   w(A,C) ≤ w(A,B) + w(B,C). In particular, if edges represent distances between points in any Euclidean space (R^n), they do satisfy triangle inequality.
