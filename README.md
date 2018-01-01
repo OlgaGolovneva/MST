@@ -8,6 +8,8 @@ Since minimum spanning trees are defined for undirected graphs only, this implem
  
 The basic algorithm is descibed [here](http://www.vldb.org/pvldb/vol7/p1047-han.pdf), and works as follows: In the first phase, each vertex finds a minimum weight outgoing edge. These edges are added to the intermediate MST (i.e. the MST at the current step). In the second phase, vertices perform Summarization algorithm, using information about Connected Components in the intermediate MST. In this step we contract each connected component into a vertex. In the third phase, vertices perform edges cleaning. The graph gets smaller and smaller, and the algorithm terminates when only unconnected vertices (i.e. no more Edges) remain. The program returns the resulting graph, which represents an MST (or Forest) of the input graph.
 
+![Distributed Boruvka's algorithm](https://github.com/OlgaGolovneva/MST/blob/master/boruvka.png)
+
 # Travelling Salesman Problem
 
 As an application of the implemented Minimum Spanning Tree algorithm, we present an approximation algorithm for the Metric Travelling Salesman Problem (TSP). We implement the 2-approximation algorithm for the Metric version of TSP by Kou, Markowsky, and Berman ["A fast algorithm for Steiner trees." Acta informatica 15.2 (1981): 141-145](http://aturing.umcs.maine.edu/~markov/SteinerTrees.pdf). This algorithm is guaranteed to return a cycle that is at most twice as long as an optimal cycle: C ≤ 2 · OPT.
